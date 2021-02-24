@@ -10,19 +10,22 @@ import { MAX_HEIGHT, MAX_WIDTH, randomNumber } from './constants'
 import { data } from './data'
 import { DB } from './db'
 import ModalComponent from './components/ModalComponent'
+import AsyncStorage from '@react-native-community/async-storage';
 const db = SQLite.openDatabase('db.db')
 export default function Gamescreen({route}) {
   const {params} = route
-  const [fullData, setFullData] = useState(data)
+  const [fullData, setFullData] = useState([...data])
   const [filtered, setFiltered] = useState(data)
   const [ismodalOn, setIsModalOn] = useState(false)
   const [played, setPlayed] = useState(0)
   const [archivedQuestions, setArchivedQuestions] = useState("")
   const [score, setScore] = useState(0)
+  const [highScore, setHighScore] = useState(0)
   const [question, setQuestion] = useState()
   const [selected, setSelected] = useState()
   const [isCorrect, setIsCorrect] = useState()
   const navigation = useNavigation()
+
   const generateRandomBetween = (min, max, exclude) => {
     min = Math.ceil(min);
     max = Math.floor(max);
@@ -33,46 +36,80 @@ export default function Gamescreen({route}) {
       return rndNum;
     }
   }
-  let unUsedData = []
-  const archiveQuestion = (num) => {
-    setFiltered(filtered => [...filtered, JSON.stringify(question)])
-    const res = fullData.filter(f => f.id !== filtered.find(obj => obj.id === f))
-    setFullData(res)
-    setQuestion(res[randomNumber(0, res.length)])
-    console.log(fullData.indexOf(question))
+
+  const setData = (data) => {
+    try {
+      AsyncStorage.setItem("DATA", JSON.stringify(data))
+    }
+    catch(e) {
+      console.log(e)
+    }
   }
-  function getNew() {
-    let index = data.indexOf(question)
-    let newIndex = data.indexOf(data[randomNumber(0, data.length - 1)])
-    if(newIndex !== index) {
-      setQuestion(data[newIndex])
+  const getData = async () => {
+    try {
+      const value = await AsyncStorage.getItem("DATA")
+      let obj = JSON.parse(value)
+      const filtered = archivedQuestions.length ? obj.filter((elem) => !archivedQuestions.find(({ id }) => elem.id === id)) : [...data]
+       setFullData(filtered)
+       setData(filtered)
+        setQuestion(fullData[generateRandomBetween(0, obj.length - 1, obj.indexOf(question))])
+        obj.length === 1 && navigation.navigate("MainMenu")
+      console.log("getData", filtered.length)
+    }
+    catch(e) {
+      console.log(e)
+    }
+  }
+
+  const getValue = async () => {
+    try {
+      const value = await AsyncStorage.getItem("HIGH_SCORE")
+      setHighScore(value)
+    }
+    catch(e) {
+      console.log("getValue", e)
+    }
+  }
+
+  const setValue = async () => {
+    try {
+      score > highScore && AsyncStorage.setItem("HIGH_SCORE", score.toString())
+    }
+    catch(e) {
+      console.log("setValue", e)
+      AsyncStorage.setItem("HIGH_SCORE", score.toString())
     }
   }
   useEffect(() => {
-    setQuestion(data[randomNumber(0, data.length - 1)])
+    setFullData(data)
+    getValue()
+      setValue()
+      setData(data)
+      setQuestion(fullData[randomNumber(0, fullData.length - 1)])
   }, [])
+  
   useEffect(() => {
     if(question && selected === question.correct) {
       setArchivedQuestions([...archivedQuestions, question])
-      console.log(archivedQuestions.length)
-      archiveQuestion()
+      getData()
       setIsCorrect(true)
       setTimeout(() => {
       setIsCorrect(undefined)
       setPlayed(played + 1)
       setScore(score + 20)
-      
       }, 400)
     }
     if(question && selected !== question.correct) {
       setIsCorrect(false)
       setPlayed(played + 1)
+      getValue()
+      setValue()
        setScore(0)
        setTimeout(() => {
         setIsModalOn(true)
        }, 400)
        setTimeout(() => {
-        setQuestion(data[randomNumber(0, data.length - 1)])
+        setQuestion(fullData[randomNumber(0, data.length - 1)])
         navigation.navigate("MainMenu")
        }, 1250)
     }
@@ -113,6 +150,7 @@ export default function Gamescreen({route}) {
         }
       </View>
       <View style={styles.score}>
+      <Text style={styles.question} >{highScore} </Text>
       <Scores text={score} padding={score.toString().length + 1} duration={played === 0 ? 1500 : 900} />
       </View>
       
