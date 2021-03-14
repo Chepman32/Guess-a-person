@@ -2,13 +2,22 @@ import * as Font from "expo-font"
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack'
 import AppLoading from 'expo-app-loading';
-import React from 'react';
+import React, { useState } from 'react';
 import Settings from "./Settings";
 import Gamescreen from './Gamescreen';
 import MainMenu from './MainMenu';
-import { DB } from "./db";
 const Stack = createStackNavigator()
 export default function App() {
+  const [ isReady, setIsReady ] = useState(false);
+  async function loadApplication() {
+    await Font.loadAsync({
+      "Recursive_Casual-Medium": require("./assets/fonts/Recursive_Casual-Medium.ttf"),
+      "Recursive-Light": require("./assets/fonts/Recursive-Light.ttf")
+    })
+  }
+  if(!isReady) {
+    return <AppLoading startAsync={ loadApplication } onError={err => console.log(err)} onFinish={() => setIsReady(true)} />
+  }
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName="MainMenu" options={{

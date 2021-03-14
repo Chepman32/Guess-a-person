@@ -1,22 +1,22 @@
 import { useNavigation } from '@react-navigation/native'
 import React, { useState } from 'react'
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native'
-import { MAX_HEIGHT, MAX_WIDTH } from './constants'
+import { MAX_HEIGHT, MAX_WIDTH, TouchableWrapper } from './constants'
 
 export default function MainMenu(props) {
   const [vibro, setVibro] = useState(false)
   const navigation = useNavigation()
   return (
     <View style={styles.container} >
-      <TouchableOpacity onPress={() => {
+      <TouchableWrapper onPress={() => {
         props.hideModal && props.hideModal()
         navigation.navigate("Gamescreen", {
           vibro,
         })
       }} style={styles.item} >
         <Text style={styles.text} >Start Game</Text>
-      </TouchableOpacity>
-      <TouchableOpacity onPress={() => {
+      </TouchableWrapper>
+      <TouchableWrapper onPress={() => {
         props.hideModal && props.hideModal()
         navigation.navigate("Settings", {
           vibro,
@@ -24,7 +24,7 @@ export default function MainMenu(props) {
         })
       }} style={styles.item} >
         <Text style={styles.text} >Settings</Text>
-      </TouchableOpacity>
+      </TouchableWrapper>
     </View>
   )
 }

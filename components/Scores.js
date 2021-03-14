@@ -96,7 +96,7 @@ export default class Scores extends Component {
         setTimeout(this.startInitialAnimation, delay);
     }
 
-    componentWillReceiveProps(newProps) {
+    UNSAFE_componentWillReceiveProps (newProps) {
         if (newProps.text === this.text) {
             return;
         }

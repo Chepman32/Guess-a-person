@@ -6,7 +6,7 @@ import { ScrollView, TextInput, TouchableOpacity } from 'react-native-gesture-ha
 import { AdMobComponent } from './components/AdMobComponent'
 import AnswerItem from './components/AnswerItem'
 import Scores from './components/Scores'
-import { MAX_HEIGHT, MAX_WIDTH, randomNumber } from './constants'
+import { generateRandomBetween, MAX_HEIGHT, MAX_WIDTH, randomNumber } from './constants'
 import { data } from './data'
 import { DB } from './db'
 import ModalComponent from './components/ModalComponent'
@@ -15,7 +15,6 @@ const db = SQLite.openDatabase('db.db')
 export default function Gamescreen({route}) {
   const {params} = route
   const [fullData, setFullData] = useState([...data])
-  const [filtered, setFiltered] = useState(data)
   const [ismodalOn, setIsModalOn] = useState(false)
   const [played, setPlayed] = useState(0)
   const [archivedQuestions, setArchivedQuestions] = useState("")
@@ -25,18 +24,6 @@ export default function Gamescreen({route}) {
   const [selected, setSelected] = useState()
   const [isCorrect, setIsCorrect] = useState()
   const navigation = useNavigation()
-
-  const generateRandomBetween = (min, max, exclude) => {
-    min = Math.ceil(min);
-    max = Math.floor(max);
-    const rndNum = Math.floor(Math.random() * (max - min)) + min;
-    if (rndNum === exclude) {
-      return generateRandomBetween(min, max, exclude);
-    } else {
-      return rndNum;
-    }
-  }
-
   const setData = (data) => {
     try {
       AsyncStorage.setItem("DATA", JSON.stringify(data))
@@ -45,15 +32,21 @@ export default function Gamescreen({route}) {
       console.log(e)
     }
   }
+  
   const getData = async () => {
+    setQuestion(fullData[generateRandomBetween(0, fullData.length, fullData.indexOf(question))])
+    setArchivedQuestions(archivedQuestions => [...archivedQuestions, question])
     try {
+      if(question && question.id === archivedQuestions[archivedQuestions.length - 1]) {
+        setQuestion(filtered[generateRandomBetween(0, filtered.length, filtered.indexOf(question))])
+      }
       const value = await AsyncStorage.getItem("DATA")
       let obj = JSON.parse(value)
-      const filtered = archivedQuestions.length ? obj.filter((elem) => !archivedQuestions.find(({ id }) => elem.id === id)) : [...data]
-       setFullData(filtered)
+      var filtered = archivedQuestions.length ? obj.filter((elem) => !archivedQuestions.find(({ id }) => elem.id === id)) : [...data]
+       setFullData(fullData => obj)
        setData(filtered)
-        setQuestion(fullData[generateRandomBetween(0, obj.length - 1, obj.indexOf(question))])
-        obj.length === 1 && navigation.navigate("MainMenu")
+
+       filtered.length === 0 && navigation.navigate("MainMenu")
       console.log("getData", filtered.length)
     }
     catch(e) {
@@ -81,16 +74,27 @@ export default function Gamescreen({route}) {
     }
   }
   useEffect(() => {
+    console.log("archivedQuestions", archivedQuestions.length)
+    console.log("fullData", fullData.length)
+    if(question && archivedQuestions.length && question.id === archivedQuestions[archivedQuestions.length - 1].id) {
+      setQuestion(fullData[generateRandomBetween(0, fullData.length, fullData.indexOf(question))])
+    }
+  })
+
+  useEffect(() => {
+    setArchivedQuestions([])
     setFullData(data)
     getValue()
-      setValue()
       setData(data)
       setQuestion(fullData[randomNumber(0, fullData.length - 1)])
   }, [])
-  
+  useEffect(() => {
+    setValue()
+    getValue()
+  })
   useEffect(() => {
     if(question && selected === question.correct) {
-      setArchivedQuestions([...archivedQuestions, question])
+      console.log(archivedQuestions.length)
       getData()
       setIsCorrect(true)
       setTimeout(() => {
@@ -98,6 +102,8 @@ export default function Gamescreen({route}) {
       setPlayed(played + 1)
       setScore(score + 20)
       }, 400)
+      setValue()
+      getValue()
     }
     if(question && selected !== question.correct) {
       setIsCorrect(false)
@@ -109,7 +115,7 @@ export default function Gamescreen({route}) {
         setIsModalOn(true)
        }, 400)
        setTimeout(() => {
-        setQuestion(fullData[randomNumber(0, data.length - 1)])
+        setQuestion(fullData[generateRandomBetween(0, fullData.length, fullData.indexOf(question))])
         navigation.navigate("MainMenu")
        }, 1250)
     }
@@ -117,7 +123,7 @@ export default function Gamescreen({route}) {
 
   return (
     <SafeAreaView style={styles.container} >
-
+      <Text style={styles.highscore} >Your highscore is {highScore} </Text>
       {
         question && <Image source={question.img} resizeMode="contain" style={styles.img} />
       }
@@ -150,7 +156,6 @@ export default function Gamescreen({route}) {
         }
       </View>
       <View style={styles.score}>
-      <Text style={styles.question} >{highScore} </Text>
       <Scores text={score} padding={score.toString().length + 1} duration={played === 0 ? 1500 : 900} />
       </View>
       
@@ -171,8 +176,13 @@ const styles = StyleSheet.create({
   },
   score: {
     position: "absolute",
+    top: MAX_HEIGHT * 0.1,
+    right: MAX_WIDTH * 0.1,
+  },
+  highscore: {
+    position: "absolute",
     top: 30,
-    right: 30,
+    left: 30,
     flexDirection: "row",
     fontSize: 30,
     color: "#fff"
